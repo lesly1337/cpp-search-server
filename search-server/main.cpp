@@ -54,9 +54,11 @@ public:
     // Считает TF
     void AddDocument(int document_id, const string& document) {
         ++document_count_; //Увеличиваем общее количество документов
-        for (const string& word : SplitIntoWordsNoStop(document)) {
-                word_to_document_freqs_[word][document_id] += 1.0 / SplitIntoWordsNoStop(document).size(); //Добавляем TF для каждого слова в этом документе в словарь
-        }
+        const vector<string> words = SplitIntoWordsNoStop(document);
+        const double fraction = 1.0 / words.size();
+        for (const string& word : words) {
+                word_to_document_freqs_[word][document_id] += fraction; //Добавляем TF для каждого слова в этом документе в словарь
+        } // Исправил
     }
  
     vector<Document> FindTopDocuments(const string& raw_query) const {        
@@ -87,9 +89,9 @@ private:
         vector<string> minus_words;
     };
     
-    bool IsMinusWord ( string text ) const {
+    bool IsMinusWord ( const string& text) const {
         bool is_minus = false;
-        if (text[0] == '-' ) {
+        if (text[0] == '-' ) { //не знаю как избавиться без ошибок
             is_minus = true;
         }
         return is_minus;
@@ -127,9 +129,9 @@ private:
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
             }
-            const double& idf = log(document_count_ * 1.0 / word_to_document_freqs_.at(word).size()); //Считаем IDF
+            const double idf = log(document_count_ * 1.0 / word_to_document_freqs_.at(word).size()); //Считаем IDF
             for (const auto [document_id, tf] : word_to_document_freqs_.at(word)) {
-                document_to_relevance[document_id] += idf * tf; //Повышаем релевантность с помощью TF-IDF
+                document_to_relevance[document_id] += idf * tf; //Считаем TF-IDF
             }
         }
         //не меняем
@@ -177,5 +179,3 @@ int main() {
  
     return 0;
 }
-
-
