@@ -10,6 +10,7 @@
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double MATH_ERROR = 1e-6;
 
 string ReadLine() {
     string s;
@@ -83,7 +84,7 @@ public:
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                 if (abs(lhs.relevance - rhs.relevance) < MATH_ERROR) {
                      return lhs.rating > rhs.rating;
                  } else {
                      return lhs.relevance > rhs.relevance;
@@ -429,14 +430,30 @@ void SortByRelevance() {
 //Вычисление рейтинга
 void CalculateAverageRating() {
     SearchServer server;
-    const vector<int> ratings = { 1, 2, 3 };
-    const int average = (1 + 2 + 3) / 3;
-    server.AddDocument(42, "cat in the city"s, DocumentStatus::ACTUAL, ratings);
+    const vector<int> ratings_1 = { 1, 2, 3 };
+    const int average_1 = (1 + 2 + 3) / 3;
+    const vector<int> ratings_2 = { -1, -2, -3 };
+    const int average_2 = (-1 - 2 - 3) / 3;
+    const vector<int> ratings_3 = { -1, 0, 2 };
+    const int average_3 = (-1 + 0 + 2) / 3;
+    server.AddDocument(42, "cat in the city"s, DocumentStatus::ACTUAL, ratings_1);
+    server.AddDocument(43, "dog out the house"s, DocumentStatus::ACTUAL, ratings_2);
+    server.AddDocument(44, "frog from swamp"s, DocumentStatus::ACTUAL, ratings_3);
  
     {
         const auto found_docs = server.FindTopDocuments("cat in"s);
         ASSERT_EQUAL(found_docs.size(), 1u);
-        ASSERT_EQUAL(found_docs[0].rating, average);
+        ASSERT_EQUAL(found_docs[0].rating, average_1);
+    }
+    {
+        const auto found_docs = server.FindTopDocuments("dog out"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        ASSERT_EQUAL(found_docs[0].rating, average_2);
+    }
+    {
+        const auto found_docs = server.FindTopDocuments("frog from"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        ASSERT_EQUAL(found_docs[0].rating, average_3);
     }
 }
 //Фильтрация предикатом
@@ -454,12 +471,32 @@ void TestByStatus() {
     SearchServer server;
     server.AddDocument(42, "cat in the city"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
     server.AddDocument(43, "dog in the house"s, DocumentStatus::IRRELEVANT, { -1, -2, -3 });
-    const auto found_docs = server.FindTopDocuments("in the"s, DocumentStatus::ACTUAL);
+    server.AddDocument(44, "frog in the swamp"s, DocumentStatus::BANNED, { 0, 1, 6 });
  
     {
+    const auto found_docs = server.FindTopDocuments("in the"s, DocumentStatus::ACTUAL);
         ASSERT_EQUAL(found_docs[0].id, 42);
     }
+    {
+    const auto found_docs = server.FindTopDocuments("in the"s, DocumentStatus::IRRELEVANT);
+        ASSERT_EQUAL(found_docs[0].id, 43);
+    }
+    {
+    const auto found_docs = server.FindTopDocuments("in the"s, DocumentStatus::BANNED);
+        ASSERT_EQUAL(found_docs[0].id, 44);
+    }
 }
+
+void CalculateRelevance() {
+    SearchServer server;
+    server.AddDocument(42, "cat in the city"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+    server.AddDocument(43, "dog in the house"s, DocumentStatus::IRRELEVANT, { -1, -2, -3 });
+    const auto found_docs = server.FindTopDocuments("cat found in downtown"s);
+    double relevance_querry = log((2 * 1.0)/1) * (1.0/4.0) + log((2*1.0)/2) * (1.0/4.0);
+    {
+        ASSERT(abs(found_docs[0].relevance - relevance_querry) < MATH_ERROR);
+    }
+    }
 
 
 // Функция TestSearchServer является точкой входа для запуска тестов
@@ -472,6 +509,7 @@ void TestSearchServer() {
     RUN_TEST(CalculateAverageRating);
     RUN_TEST(SortByPredicate);
     RUN_TEST(TestByStatus);
+    RUN_TEST(CalculateRelevance);
 }
 
 int main() {
