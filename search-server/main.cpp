@@ -88,7 +88,7 @@ public:
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
             for ( const auto& word : stop_words) {
                 if ( !IsValidWord(word) ) {
-                    throw invalid_argument("Invalid argument");
+                    throw invalid_argument("Special symbol entered");
                 }
             }
     }
@@ -101,39 +101,40 @@ public:
 
     
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
-        if (!IsValidWord(document) || document_id < 0 || documents_.count(document_id) != 0) { 
-            throw invalid_argument("Invalid argument"s);
+        if (!IsValidWord(document)) { 
+            throw invalid_argument("Special symbol entered"s);
+        } else if ( document_id < 0 ) { 
+            throw invalid_argument("Negative id entered"s);
+        } else if ( documents_.count(document_id) != 0) { 
+            throw invalid_argument("Existing id entered"s);
         }
         
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
             if (!IsValidWord(word)) {
-            throw invalid_argument("Invalid argument"s);
+            throw invalid_argument("Special symbol entered"s);
             }
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
         documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
-        doc_order_num.push_back(document_id);
+        documents_order_num.push_back(document_id);
     }
 
     
     
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
-        Query query;
-        if (!ParseQuery(raw_query, query)) {
-            throw invalid_argument("Invalid argument"s);
-        }
+        Query query = ParseQuery(raw_query);
+        
         auto matched_documents = FindAllDocuments(query, document_predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
                  if (abs(lhs.relevance - rhs.relevance) < MATH_ERROR) {
                      return lhs.rating > rhs.rating;
-                 } else {
-                     return lhs.relevance > rhs.relevance;
                  }
+                     return lhs.relevance > rhs.relevance;
              });
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -158,10 +159,7 @@ public:
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        Query query;
-        if (!ParseQuery(raw_query, query)) {
-            throw invalid_argument("Invalid argument"s);
-        }
+        Query query = ParseQuery(raw_query);
         
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
@@ -185,10 +183,7 @@ public:
     }
 
     int GetDocumentId(int doc_order_num) {
-        if (doc_order_num < 0 || doc_order_num > static_cast<int>(documents_.size())) {
-            throw out_of_range("Out of range"s);
-        }
-        return doc_order_num;
+        return documents_order_num.at(doc_order_num);
     }  
         
 private:
@@ -199,7 +194,7 @@ private:
     const set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
-    vector<int> doc_order_num; // контейнер с порядковыми номерами
+    vector<int> documents_order_num; // контейнер с порядковыми номерами
 
    static bool IsValidWord(const string& word) {
         // A valid word must not contain special characters
@@ -240,17 +235,20 @@ private:
         bool is_stop;
     };
     //Обновлённый парсинг
-    [[nodiscard]] bool ParseQueryWord(string text, QueryWord& result) const {
+    QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
         }
-        if (text.empty() || !IsValidWord(text) || text[0] == '-') {
-            return false;
+        if (text.empty()) {
+            throw invalid_argument("No text after minus"s);
+        } else if (!IsValidWord(text)) {
+            throw invalid_argument("Special symbol entered"s);
+        } else if (text[0] == '-') {
+            throw invalid_argument("More than 1 minus entered"s);
         }
-        result = QueryWord{ text, is_minus, IsStopWord(text) };
-        return true;
+        return { text, is_minus, IsStopWord(text) };
     }
 
     struct Query {
@@ -258,12 +256,10 @@ private:
         set<string> minus_words;
     };
 
-    [[nodiscard]] bool ParseQuery(const string& text, Query& result) const {
+    Query ParseQuery(const string& text) const {
+        Query result;
         for (const string& word : SplitIntoWords(text)) {
-            QueryWord query_word;
-            if (!ParseQueryWord(word, query_word)) {
-                return false;
-            }
+            QueryWord query_word = ParseQueryWord(word);;
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
                     result.minus_words.insert(query_word.data);
@@ -272,7 +268,7 @@ private:
                 }
             }
         }
-        return true;
+        return result;
     }
 
     // Existence required
