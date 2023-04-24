@@ -34,10 +34,9 @@ public:
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;   
  
     
+    std::set<int>::const_iterator begin();
     
-    std::vector<int>::const_iterator begin();
-    
-    std::vector<int>::const_iterator end();
+    std::set<int>::const_iterator end();
     
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
     
@@ -52,7 +51,7 @@ private:
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::map<int, std::map<std::string, double>> documents_to_word_freqs_;  //Добавим контейнер с частотой слов по его id
     std::map<int, DocumentData> documents_;  
-    std::vector<int> documents_order_num; // контейнер с порядковыми номерами  
+    std::set<int> documents_order_num; // контейнер с порядковыми номерами  
   
    static bool IsValidWord(const std::string& word); 
   

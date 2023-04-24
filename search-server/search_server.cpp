@@ -22,7 +22,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
             documents_to_word_freqs_[document_id][word] += inv_word_count;  // Добавляем в поле частоту слова по id
         }  
         documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});  
-        documents_order_num.push_back(document_id);  
+        documents_order_num.insert(document_id);  
     } 
  
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {  
@@ -127,13 +127,11 @@ double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) con
         return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());  
     } 
 
-
-
-std::vector<int>::const_iterator SearchServer::begin() {
+std::set<int>::const_iterator SearchServer::begin() {
         return documents_order_num.begin();
     }
 
-std::vector<int>::const_iterator SearchServer::end() {
+std::set<int>::const_iterator SearchServer::end() {
         return documents_order_num.end();
     }
 
@@ -149,14 +147,18 @@ void SearchServer::RemoveDocument(int document_id) {
     if ( documents_to_word_freqs_.count(document_id) != 0 ) {
     documents_.erase(document_id);
         
-    std::vector<int>::iterator position = std::find(documents_order_num.begin(), documents_order_num.end(), document_id);
+    std::set<int>::iterator position = std::find(documents_order_num.begin(), documents_order_num.end(), document_id);
         
     documents_order_num.erase(position);
         
     for ( auto [word, frequency] : documents_to_word_freqs_[document_id] ) {
             word_to_document_freqs_[word].erase(document_id);
+            if ( word_to_document_freqs_[word].empty() ) {
+                word_to_document_freqs_.erase(word);
+            }
         }    
     documents_to_word_freqs_.erase(document_id);
     }
 }
+
 
