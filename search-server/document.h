@@ -1,6 +1,5 @@
-#pragma once
+#pragma once 
 #include <iostream>
-
 struct Document {  
     Document() = default;  
   
@@ -11,11 +10,11 @@ struct Document {
     int rating = 0;  
 };  
  
-enum class DocumentStatus {  
-    ACTUAL,  
-    IRRELEVANT,  
-    BANNED,  
-    REMOVED
-};
-
+enum class DocumentStatus {   
+    ACTUAL,   
+    IRRELEVANT,   
+    BANNED,   
+    REMOVED 
+}; 
+ 
 std::ostream& operator<<(std::ostream& out, Document doc);

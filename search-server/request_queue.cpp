@@ -21,5 +21,5 @@
      
     int RequestQueue::GetNoResultRequests() const { 
         return no_results_requests_; 
-    }
+    } 
 

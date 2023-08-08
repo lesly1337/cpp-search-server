@@ -1,6 +1,7 @@
 #pragma once 
 #include <algorithm> 
 #include <iostream> 
+#include "document.h" 
 template <typename Iterator> 
 class IteratorRange  { 
 public: 
@@ -61,7 +62,6 @@ template <typename Container>
 auto Paginate(const Container& c, size_t page_size) { 
     return Paginator(begin(c), end(c), page_size); 
 } 
-
   
 template <typename Iterator> 
 std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& range) { 
@@ -69,4 +69,4 @@ std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& range
         out << *it; 
     } 
     return out; 
-}
+} 
